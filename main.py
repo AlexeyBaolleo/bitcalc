@@ -2,17 +2,25 @@ import argparse
 import sys
 import os
 
+
 def parse_input(user_input: str) -> int:
     user_input = user_input.strip().lower()
+    
+    is_negative = False
+    if user_input[0] == "-":
+        user_input = user_input[1:]
+        is_negative = True
+
     if user_input[:2] == "0x":
-        return int(user_input[2:], 16)
+        number = int(user_input[2:], 16)
     elif user_input[:2] == "0b":
-        return int(user_input[2:], 2)
+        number = int(user_input[2:], 2)
     elif user_input.isdigit():
-        return int(user_input)
+        number = int(user_input)
     else:
         raise ValueError("Не поддерживаемый формат числа")
 
+    return -number if is_negative else number
 
 def convert(user_input: str) -> str:
     try:
@@ -23,11 +31,13 @@ def convert(user_input: str) -> str:
             f"HEX: {hex(number)}\n"
         )
     except ValueError as e:
-        return e
+        return str(e)
 
 
 def format_output(res: int) -> int:
-    return f"DEC: {res}, BIN: 0b{res:04b}"
+    if res < 0:
+        return f"DEC: {res}, BIN: -0b{abs(res):b}, HEX: -0x{abs(res):x}"
+    return f"DEC: {res}, BIN: 0b{res:b}, HEX: 0x{res:x}"
 
 
 def logical_AND(a: int, b: int) -> str:
@@ -60,10 +70,10 @@ def shift_right(a: int, length: int) -> str:
     return format_output(res)
 
 
-def clear_console():
+def clear_console() -> None:
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def print_welcome():
+def print_welcome() -> None:
     border = '═' * 40
     italic_mildy = r'''
   __  __   _   _       _         
@@ -84,16 +94,87 @@ def print_welcome():
     print("║{:^40}║".format(""))
     print("╚" + border + "╝")
 
-def run_ui():
+def run_ui() -> None:
     clear_console()
     print_welcome()
 
 
-    print("")
+    print (
+        "1) convert - конвертирует число в десятичное/двоичное/шестнадцетиричное,\n"
+        "2) and - Логическое И,\n"
+        "3) or - Логическое ИЛИ,\n"
+        "4) xor - Исключающее ИЛИ,\n"
+        "5) not - Логическое НЕ,\n"
+        "6) shl - Сдвиг влево на N,\n"
+        "7) shr - Сдвиг вправо на N,\n" )
+
+    answer = ""
+    while True:
+        answer = input("Введите нужную функцию или введите exit для выхода: ")
+
+        if answer == "1":
+            print("Введите число для конвертации в любой системе счисления (двоичной, десятичной, шестнадцетиричной)")
+            try:
+                a = input("Введите число: ")
+                print(convert(a))
+            except Exception as e:
+                print(e)
+            
+        elif answer == "2":
+            print("Введите два числа для выполнения логической операции И, AND( & )")
+            try:
+                a = int(input("Введите первое число: "), 0)
+                b = int(input("Введите второе число: "), 0)
+                print(logical_AND(a, b))
+            except ValueError:
+                print(f"Не поддерживаемый формат числа, введите число (0b1010, 10, 0xA)")
+
+        elif answer == "3":
+            print("Введите два числа для выполнения логической операции ИЛИ, OR( | )")
+            try:
+                a = int(input("Введите первое число: "), 0)
+                b = int(input("Введите второе число: "), 0)
+                print(logical_OR(a, b))
+            except ValueError:
+                print(f"Не поддерживаемый формат числа, введите число (0b1010, 10, 0xA)")
+        elif answer == "4":
+            print("Введите два числа для выполнения логической операции Исключающие ИЛИ, XOR( ^ )")
+            try:
+                a = int(input("Введите первое число: "), 0)
+                b = int(input("Введите второе число: "), 0)
+                print(logical_XOR(a, b))
+            except ValueError:
+                print(f"Не поддерживаемый формат числа, введите число (0b1010, 10, 0xA)")
+        elif answer == "5":
+            print("Введите число для выполнения логической операции НЕ, NOT( ~ )")
+            try:
+                a = int(input("Введите число: "), 0)
+                print(logical_NOT(a))
+            except ValueError:
+                print(f"Не поддерживаемый формат числа, введите число (0b1010, 10, 0xA)")
+        elif answer == "6":
+            print("Введите число и длину для выполнения сдвига влево ( << )")
+            try:
+                a = int(input("Введите число: "), 0)
+                length = int(input("Ввдите длину сдвига: "), 0)
+                print(shift_left(a, length))
+            except ValueError:
+                print(f"Не поддерживаемый формат числа, введите число (0b1010, 10, 0xA)")
+        elif answer == "7":
+            print("Введите число и длину для выполнения сдвига вправо ( >> )")
+            try:
+                a = int(input("Введите число: "), 0)
+                length = int(input("Ввдите длину сдвига: "), 0)
+                print(shift_right(a, length))
+            except ValueError:
+                print(f"Не поддерживаемый формат числа, введите число (0b1010, 10, 0xA)")
+        elif answer == "exit":
+            break
+        else:
+            print("Нет такой функции")
 
 
-
-def main():
+def main() -> None:
     FUNCTIONS = {
         "convert": convert,
         "and": logical_AND,
@@ -132,11 +213,16 @@ def main():
                             shl: A << Length
                             shr: A >> Length""")
 
+    parser.add_argument("--output", help="Путь к файлу для вывода результата")
+
     parsed = parser.parse_args()
 
     if not parsed.func:
-        run_ui()
-        return
+        try:
+            run_ui()
+        except KeyboardInterrupt:
+            print("\nВыход")
+
 
     if parsed.func not in FUNCTIONS:
         print("Нет такой функции.")
@@ -160,10 +246,12 @@ def main():
         print(f"Ошибка {e}")
         sys.exit(4)
 
+    if parsed.output:
+        with open(parsed.output, "w") as f:
+            f.write(result + "\n")
+    else:
+        print(result)
+
+
 if __name__ == "__main__":
     main()
-
-    # ------------------ ЗАДАЧИ НА ЗАВТРА, УТРО------------------------
-    # доделать для отрицательных чисел
-    # Добавить гит + README.md
-    # Добавить минимальный UI (Введите число, введите операцию и т.п.)
